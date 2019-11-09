@@ -7,27 +7,16 @@
 # !/usr/bin/env python
 # coding: utf-8
 #make an import from requirements doc
-import matplotlib.pyplot as plt
-import itertools as it
-import random as rd
+
 import numpy as np
-import copy as co
-import matplotlib.pyplot as plt
-from matplotlib import pyplot
-import scipy as sci
-import scipy.spatial.distance as dist
+#import scipy as sci
+#import scipy.spatial.distance as dist
 from shapely.geometry import Point,MultiPoint,Polygon
-from shapely.ops import nearest_points
-from math import *
+import math
 import pandas as pd
-from geopandas import *
-import timeit
-import networkx as nx
-import statsmodels.api as sm
-import pickle
-from scipy.integrate import quad
-import statsmodels.api as sm
-import scipy.stats
+import geopandas as gdp
+
+
 
 
 
@@ -61,7 +50,7 @@ class Demographics():
         return(pop_matrix)
 
     def __init__(self,geodata,groups):
-        self.population_matrix=self.transform_population(geodata,groups)
+        self.population_matrix=Demographics.transform_population(geodata,groups)
         self.sum_pop_local = np.sum(self.population_matrix, axis=1)
         self.sum_pop_group = np.sum(self.population_matrix, axis=0)
         self.total_pop=np.sum(self.population_matrix)
@@ -113,60 +102,56 @@ class LocalDivergenceProfile():
 
         '''
 
-    def __init__(self,ddprofile,origin,key,path='crows',groups):
-        self.geodata=ddprofile
-        self.origin={'id':self.geodata.dataframe.iloc(origin)[key],'coordinates':self.geodata.dataframe.iloc(origin).geometry.centroid}
+    def __init__(self,ddprofile,origin,key,path='crows',groups='all'):
+        self.city=ddprofile
+        self.origin={'id':self.city.dataframe[key][origin],'coordinates':self.city.dataframe.geometry.centroid[origin]}
         self.path=path
         self.groups=groups
 
     def find_neighbours(self):
-        if self.path='crows':
-            distance_to_others=[self.origin['coordinates'].distance(i) for i in self.geodata.coordinates]#from the dd_profile dataframe
+        if self.path=='crows':
+            distance_to_others=[self.origin['coordinates'].distance(i) for i in self.city.coordinates]#from the dd_profile dataframe
         else :
-            distance_to_others=[self.path[self.origin['id']][i] for i in self.geodata.coordinates]
+            distance_to_others=[self.path[self.origin['id']][i] for i in self.city.coordinates]
         self.neighbours = np.argsort(distance_to_others)
         self.distance_neighbours=np.sort(distance_to_others)
-
-        if self.groups='all':
-            self.sorted_population=self.geodata.demography.population_matrix[self.neighbours,:]
-        else :
-            self.sorted_population=self.geodata.demography.marginal_population_matrix[self.neighbours,:]
-
+        self.sorted_population=self.city.demography.population_matrix[self.neighbours,:]
+        
 
     def draw_profile(self):
         #cumulative sum for each group
         cumul_pop=np.cumsum(self.sorted_population,axis=0)
         #cumulative sum regardless of group
-        all_cumul_pop=np.cumsum(cumul_pop,axis=1)
+        all_cumul_pop=np.sum(cumul_pop,axis=1)
         #Division termes à termes des sommes cumulées partielles et de la population totale cumulée
         cumul_proportion_group = cumul_pop / all_cumul_pop[:,np.newaxis]
         #Division termes à termes de la proportion suivante (matrice) par la proportion globale de chaque groupe
-        relative_cumul_proportion = cumul_proportion_group / self.geodata.demogrphy.global_statistics
+        relative_cumul_proportion = cumul_proportion_group / self.city.demography.global_statistics
         #Le log de ce rapport de rapport
         log_relative_cumul = np.log(relative_cumul_proportion)
         #Traiter les 0log(0)
-        log_relative_cumul[log_relative_cumul == -inf] = 0
+        log_relative_cumul[log_relative_cumul == -math.inf] = 0
         #Remultiplier par les proportions cumulées de chaque groupe et en faire la somme sur le nombre de groupes
         self.profile = np.sum(np.multiply(cumul_proportion_group,log_relative_cumul),axis = 1)
 
     def calculate_indexes(self):
         sorted_pop_local=np.sum(self.sorted_population,axis=1)
         max_distortion=0#max from end
-        min_distortion=divergence_from_origin.profile[0]#max from beginning
-        self.max_profile=np.zeros(len(self.dataframe))
-        self.min_profile=np.zeros(len(self.dataframe))
+        min_distortion=self.profile[0]#max from beginning
+        self.max_profile=np.zeros(self.city.size)
+        self.min_profile=np.zeros(self.city.size)
 
-        for level in range(1,len(self.dataframe)+1):
+        for level in range(1,self.city.size + 1):
             max_distortion = max(self.profile[-level] , max_distortion)
             self.max_profile[-level] = max_distortion
             min_distortion = min(min_distortion , self.profile[level-1])
             self.min_profile[level-1]=min_distortion
         delta_min_max=list(map(float.__sub__,self.max_profile , self.min_profile))
-        self.max_index=np.sum(np.multiply(self.max_profile , sorted_pop_local)/self.geodata.demography.total_pop
-        self.max_index_normal=self.max_index/self.geodatat.sup_distortion #normal version
-        self.min_index=np.sum(np.multiply(self.min_profile , sorted_pop_local)/self.geodata.demography.total_pop
-        self.delta_index=np.sum(np.multiply(delta_min_max , sorted_pop_local)/self.geodata.demography.total_pop
-        self.expected_divergence=np.sum(np.multiply(self.profile , sorted_pop_local)/self.geodata.demography.total_pop
+        self.max_index=np.sum(np.multiply(self.max_profile , sorted_pop_local))/self.city.demography.total_pop
+        self.max_index_normal=self.max_index / self.city.sup_distortion 
+        self.min_index=np.sum(np.multiply(self.min_profile , sorted_pop_local))/self.city.demography.total_pop
+        self.delta_index=np.sum(np.multiply(delta_min_max , sorted_pop_local))/self.city.demography.total_pop
+        self.expected_divergence=np.sum(np.multiply(self.profile , sorted_pop_local))/self.city.demography.total_pop
 
 
 
@@ -192,19 +177,20 @@ class DivergenceProfiles :
         #Le log de ce rapport de rapport
         log_relative_cumul = np.log(relative_cumul_proportions)
         #Traiter les 0log(0)
-        log_relative_cumul[log_relative_cumul == -inf] = 0
+        log_relative_cumul[log_relative_cumul == -math.inf] = 0
         #Remultiplier par les proportions cumulées de chaque groupe et en faire la somme sur le nombre de groupes
         div = np.sum(np.multiply(cumul_proportions,log_relative_cumul),axis = 1)
-        theo_max_distortion = np.sum(myDiv)/len(geodata)
+        theo_max_distortion = np.sum(div)/len(geodata)
         return(theo_max_distortion)
 
     def __init__(self,geodata,groups,key):
         self.dataframe=geodata.sample(frac=1).reset_index(drop=True)#verifier si ca cree une copir qui est permute ou non
+        self.size=len(self.dataframe)
         self.key=key
         self.groups=groups
         self.coordinates=self.dataframe.geometry.centroid
-        self.demography=Demograhics(self.dataframe,self.groups)
-        self.sup_distortion=theoretical_max_distortion(self.dataframe,self.demography.sum_pop_group,
+        self.demography=Demographics(self.dataframe,self.groups)
+        self.sup_distortion=DivergenceProfiles.theoretical_max_distortion(self.dataframe,self.demography.sum_pop_group,
                                                         self.demography.global_statistics)
 
 
@@ -216,10 +202,10 @@ class DivergenceProfiles :
             other_population=self.groups.copy()
             other_population.remove(marginal_group)
             self.dataframe[others]=self.dataframe[other_population].sum(axis=1)
-            self.marginal_demography=Demographics(self.dataframe,new_groups)
+            self.demography=Demographics(self.dataframe,new_groups)
 
         self.divergence_data=[]
-        for origin in range(len(self.dataframe)):
+        for origin in range(self.size):
             divergence_from_origin = LocalDivergenceProfile(self,origin,self.key,path,marginal_group)
             divergence_from_origin.find_neighbours()
             divergence_from_origin.draw_profile()
@@ -228,13 +214,13 @@ class DivergenceProfiles :
 
 
     def update_data(self):
-        self.dataframe['max_index']=pd.Series([self.divergence_data[i].max_index for i in range(len(self.dataframe))],
+        self.dataframe['max_index']=pd.Series([self.divergence_data[i].max_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['min_index']=pd.Series([self.divergence_data[i].min_index for i in range(len(self.dataframe))],
+        self.dataframe['min_index']=pd.Series([self.divergence_data[i].min_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['delta_index']=pd.Series([self.divergence_data[i].delta_index for i in range(len(self.dataframe))],
+        self.dataframe['delta_index']=pd.Series([self.divergence_data[i].delta_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['expected_divergence']=pd.Series([self.divergence_data[i].expected_divergence for i in range(len(self.dataframe))],
+        self.dataframe['expected_divergence']=pd.Series([self.divergence_data[i].expected_divergence for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
 
     def save_to_file(self,file_name):
