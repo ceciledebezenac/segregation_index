@@ -22,7 +22,6 @@ import geopandas as gdp
 
 
 
-# In[11]:
 class Demographics():
     '''Compute the general population statistics
     Attributes
@@ -203,7 +202,9 @@ class DivergenceProfiles :
             other_population.remove(marginal_group)
             self.dataframe[others]=self.dataframe[other_population].sum(axis=1)
             self.demography=Demographics(self.dataframe,new_groups)
-
+        else:
+            self.demography=Demographics(self.dataframe,self.groups)
+        
         self.divergence_data=[]
         for origin in range(self.size):
             divergence_from_origin = LocalDivergenceProfile(self,origin,self.key,path,marginal_group)
