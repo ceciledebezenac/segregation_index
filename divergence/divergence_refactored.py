@@ -1,21 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-# !/usr/bin/env python
-# coding: utf-8
-#make an import from requirements doc
 
 import numpy as np
-#import scipy as sci
-#import scipy.spatial.distance as dist
 from shapely.geometry import Point,MultiPoint,Polygon
 import math
 import pandas as pd
 import geopandas as gdp
-
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+import statsmodels.api as sm
+import scipy.stats
 
 import sys
 
@@ -55,6 +47,54 @@ class Demographics():
         self.total_pop=np.sum(self.population_matrix)
         self.global_statistics=self.sum_pop_group/self.total_pop
         self.relative_density=self.sum_pop_local/self.total_pop
+        
+        
+        
+class LorenzCurve():
+    
+    def lorenz_list(dataset,variable):
+        sorted_list=list(dataset[variable].copy())
+        sorted_list.sort()
+        lorenz=np.cumsum(np.array(sorted_list))
+        total_population=lorenz[-1]
+        lorenz=lorenz/total_population 
+        return(lorenz)
+    
+    def __init__(self,data,group):
+        self.group=group
+        self.lorenz_array=LorenzCurve.lorenz_list(data,group)
+        self.gini=(0.5-np.sum(self.lorenz_array)/len(data))/0.5
+        
+        
+    def plot_curve(self,title='Lorenz Curve',figure_size=(12,10),legend='Lorenz curve',line=1, line_color="black",show_axis=False):
+        plt.figure(figsize=figure_size)    
+ 
+        ax = plt.subplot(111)    
+        ax.spines["top"].set_visible(False)    
+        ax.spines["bottom"].set_visible(False)    
+        ax.spines["right"].set_visible(False)    
+        ax.spines["left"].set_visible(False)    
+        
+        if show_axis==False:
+            ax.set_xticks([], [])
+            ax.set_yticks([], [])
+        else:
+            ax.get_xaxis().tick_bottom()    
+            ax.get_yaxis().tick_left()
+
+        plt.plot(list(self.lorenz_array), lw=line, color=line_color, alpha=0.3)    
+
+        plt.tick_params(axis="both", which="both", bottom="off", top="off",    
+                        labelbottom="on", left="off", right="off", labelleft="on")
+
+        plt.text(0, -0.18,legend, fontsize=12, family='serif')
+
+    def save_curve(self,path):
+        pass
+        #plt.savefig(path)
+        #ca ne marche pas encore: a voir
+        
+        
 
 class LocalDivergenceProfile():
     '''Compute the divergence profile for a given geographic unit.
@@ -212,17 +252,30 @@ class DivergenceProfiles :
             divergence_from_origin.draw_profile()
             divergence_from_origin.calculate_indexes()
             self.divergence_data.append(divergence_from_origin)
+        self.hindex=sum([self.divergence_data[i].profile[0] for i in range(self.size)])/self.size
+        self.ehindex=sum([self.divergence_data[i].expected_divergence for i in range(self.size)])/self.size
+        self.mean_max_index=sum([self.divergence_data[i].max_index for i in range(self.size)])/self.size
 
 
-    def update_data(self):
-        self.dataframe['max_index']=pd.Series([self.divergence_data[i].max_index for i in range(self.size)],
+
+
+    def update_data(self,suffixe=''):    
+        self.dataframe['max_index'+suffixe]=pd.Series([self.divergence_data[i].max_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['min_index']=pd.Series([self.divergence_data[i].min_index for i in range(self.size)],
+        self.dataframe['max_index_normal'+suffixe]=pd.Series([self.divergence_data[i].max_index_normal for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['delta_index']=pd.Series([self.divergence_data[i].delta_index for i in range(self.size)],
+        self.dataframe['min_index'+suffixe]=pd.Series([self.divergence_data[i].min_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
-        self.dataframe['expected_divergence']=pd.Series([self.divergence_data[i].expected_divergence for i in range(self.size)],
+        self.dataframe['delta_index'+suffixe]=pd.Series([self.divergence_data[i].delta_index for i in range(self.size)],
         index=[i for i in range(len(self.dataframe))])
+        self.dataframe['expected_divergence'+suffixe]=pd.Series([self.divergence_data[i].expected_divergence for i in range(self.size)],
+        index=[i for i in range(len(self.dataframe))])
+
+
+    def approximate_distribution(self,step):
+        pass
+        
+
 
     def save_to_file(self,file_name):
         pass
