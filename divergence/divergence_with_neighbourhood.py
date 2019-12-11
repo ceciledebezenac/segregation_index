@@ -1,13 +1,14 @@
 
 import numpy as np
-from shapely.geometry import Point,MultiPoint,Polygon
+
 from shapely.ops import cascaded_union
 import math
 import pandas as pd
-import geopandas as gdp
+
 import matplotlib.pyplot as plt
 from distortion.divergence.basic_analysis import Demographics
 from distortion.divergence.neighbourhood import Neighbourhood
+import seaborn as sns
 
 
 def filter_na(data,variable,show_null=True):
@@ -281,12 +282,14 @@ class DivergenceProfiles :
 
     '''
     def no_null(geodata,groups):
-        total=geodata[groups[0]]
-        for column in groups[1:]:
-            total+=geodata[column]
-        geodata['total']=total
-        print(str(len(geodata[geodata['total']==0]) )+' spatial units have been left out because of null values over all groups. Check your data or continue.')
-        return(geodata[geodata['total']>0])
+        '''find null values on total of all group counts and exclude them as they will drive the KL divergence to nan values.'''
+        
+        geocopy=geodata.copy()
+        geocopy['total']=geocopy[groups].sum(axis=1)
+        
+        print(str(len(geocopy[geocopy['total']==0]) )+' spatial units have been left out because of null values over all groups. Check your data or continue.')
+        geocopy=geocopy[geocopy['total']>0]
+        return(geocopy)
         
     def __init__(self,geodata,groups):
         
@@ -431,28 +434,126 @@ class DivergenceProfiles :
             self.dataframe['expected_divergence'+suffixe]=pd.Series([self.divergence_data[i].expected_divergence for i in range(self.size)],
             index=[i for i in range(len(self.dataframe))])
                 
-    def plot(self, variable,figure_size=(12,10),text='',color_type='Reds',set_ticks=False):
+    def plot_map(self, variable,figure_size=(12,10),text='',color_type='Reds',set_ticks=False):
         '''
         This method will plot the map of a given local index. This could be a segregation measure or any other quantitative variable.
+       
         Parameters
         ----------
-        variable
-        figure_size
-        text
-        color_type
-        set_ticks
+        variable: string
+            the variable (or column) the user would like to see represented on the map
+        figure_size: tuple of integers
+            the size of the figure
+        text: string
+            the text that should be displayed.
+        color_type: string
+            one of the cmap options given by matplotlib.pyplot for plotting maps. Check documation.
+        set_ticks: Boolean
+            keep the side ticks and bars on the map.
+        
+        Returns
+        -------
+        map of the city with a color scale for the quantitative variable. 
         
         '''
+        #initialise figure
         f, ax = plt.subplots(1, figsize=figure_size)
-        ax = data.plot(column=variable,cmap=color_type,legend=True,ax=ax)
+        #plot the map given the parameters
+        ax = self.dataframe.plot(column=variable,cmap=color_type,legend=True,ax=ax)
+        #get rid of useless spines
         ax.spines["top"].set_visible(False)    
         ax.spines["bottom"].set_visible(False)    
         ax.spines["right"].set_visible(False)    
         ax.spines["left"].set_visible(False)
+        #get rid of ticks
         if set_ticks==False:
             ax.set_xticks([], [])
             ax.set_yticks([], [])
-        lims = plt.axis('equal')
+        #lims = plt.axis('equal')
+        
+    
+    def plot_profiles(self,index_list,figure_size=(10,6)):#index_list=[i for i in range(self.size)],figure_size=(10,6)):
+        '''
+        This method will plot the KL divergence profiles of spatial units over all aggregation levels (the x axis being the aggregated units).
+       
+        Parameters
+        ----------
+        index_list: list of integers (location of row in dataframe)
+            the units for profile plotting, from 1 to all spatial units.
+        figure_size: tuple of integers
+            the size of the figure
+            default: (10,6)
+        
+        
+        Returns
+        -------
+        Plots of profiles. These represent the KL divergence of the aggregated units for each aggregation level starting from the local units selected by the user. 
+        
+        '''
+        #initialise figure
+        plt.figure(figsize=figure_size) 
+        ax = plt.subplot(111)    
+        ax.spines["top"].set_visible(False)    
+        ax.spines["bottom"].set_visible(False)    
+        ax.spines["right"].set_visible(False)    
+        ax.spines["left"].set_visible(False) 
+        #layout of the plot, manage ticks and labels
+        ax.get_xaxis().tick_bottom()    
+        ax.get_yaxis().tick_left() 
+        
+        plt.tick_params(axis="both", which="both", bottom="off", top="off",    
+                        labelbottom="on", left="off", right="off", labelleft="on")
+        plt.xticks(fontsize=10) 
+        plt.yticks(fontsize=10)    
+        plt.xticks(fontsize=10)
+        #plot the profiles given the parameters
+        for i in index_list:
+            plt.plot(self.divergence_data[i].profile,linewidth=1)
+            
+    def plot_distribution(self,variable,histogram=True,KDE=True,figure_size=(10,6),bins=20,color='red',):
+        ''' 
+        This method will plot the distribution of a given variable over all units (from the ones computed previously).
+       
+        Parameters
+        ----------
+        variable: string
+            the variable (or column) whose distribution should be analysed.
+        histogram: Boolean
+            for the pyplot.plot parameters, show histogram.
+        KDE: Boolean
+            for the pyplot.plot parameters, show density curve from KDE method. 
+        figure_size: tuple of integers
+            the size of the figure
+        bins: integer
+            number of bins for the histogram.
+        color: string
+            one of the cmap options given by matplotlib.pyplot for plots.
+        
+        
+        Returns
+        -------
+        Histogram and density plot for the particular variable in the city. 
+        '''
+        plt.figure(figsize=figure_size)    
+        
+        # Remove the plot frame lines.    
+        ax = plt.subplot(111)    
+        ax.spines["top"].set_visible(False)    
+        ax.spines["bottom"].set_visible(True)    
+        ax.spines["right"].set_visible(False)    
+        ax.spines["left"].set_visible(True)    
+        #ax.get_xaxis().tick_bottom()    
+        #ax.get_yaxis().tick_left() 
+        ax.tick_params(axis="both", which="both", bottom="off", top="off",    
+                        labelbottom="off", left="off", right="off", labelleft="off")
+        #actually plot the distribution with the kde method for interpolation of density function. 
+        sns.distplot(self.dataframe[variable],hist=histogram,kde=KDE,bins=20, color = 'red',
+                     hist_kws={'edgecolor': 'white'},kde_kws={'linewidth': 4})   
+        # Plot formatting
+        plt.title('Density Plot of Distortion Index')
+        plt.xlabel('distortion')
+        plt.ylabel('density')
+                 
 
     def save_dataframe(self,file_name):
         ''' Save updated dataframe with path and file name.'''
