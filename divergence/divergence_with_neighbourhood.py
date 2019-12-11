@@ -15,7 +15,7 @@ def filter_na(data,variable,show_null=True):
     if show_null==True:
         #show as an option what has been filtered out.
         data[data.isnull().any(axis=1)].plot()
-        print(data[data.isnull().any(axis=1)]['TRACT'])
+        print('These units have been excluded from the analysis. Check data or continue without.\n\n' ,data[data.isnull().any(axis=1)]['TRACT'])
     return(data[data[variable].notnull()])
     
     
@@ -152,6 +152,7 @@ class LocalDivergenceProfile():
         '''
 
     def __init__(self,city,origin):
+        
         #acces city attributes to avoid keeping a copy of city in memory
         self.city_demography=city.demography
         #define data structure for origin as an identity, centroid (Point) and shape (Polygon)
@@ -279,11 +280,20 @@ class DivergenceProfiles :
         
 
     '''
+    def no_null(geodata,groups):
+        total=geodata[groups[0]]
+        for column in groups[1:]:
+            total+=geodata[column]
+        geodata['total']=total
+        print(str(len(geodata[geodata['total']==0]) )+' spatial units have been left out because of null values over all groups. Check your data or continue.')
+        return(geodata[geodata['total']>0])
         
     def __init__(self,geodata,groups):
         
         #initialise the attributes
-        self.dataframe=geodata[geodata['Total']>0]
+        #get rid of the columns that could cause a problem when computing divergence. 
+        self.dataframe=DivergenceProfiles.no_null(geodata,groups)
+        
         #make sure the indexing is in order (after data cleaning and filtering rows)
         self.dataframe.reset_index(drop=True,inplace=True)
     
@@ -368,19 +378,24 @@ class DivergenceProfiles :
             - mean_max_index
         
         '''
-        #initialise list for receiving divergence indices for each unit. 
-        self.divergence_data=[]
-        for origin in range(self.size):
-            #create profile instance for unit origin
-            divergence_from_origin = LocalDivergenceProfile(self,origin)
-            #compute all indices with calculate_indices() method
-            divergence_from_origin.calculate_indices()
-            #add the profile and indices in LocalDivergenceProfile structure into the divergence data list
-            self.divergence_data.append(divergence_from_origin)
-        #compute the global indices over all units once all profiles are given
-        self.hindex=sum([self.divergence_data[i].profile[0]for i in range(self.size)])/self.size
-        self.ehindex=sum([self.divergence_data[i].expected_divergence for i in range(self.size)])/self.size
-        self.mean_max_index=sum([self.divergence_data[i].max_index for i in range(self.size)])/self.size
+        #check if the set_neighbourhood() method has been called first and send an error message.
+        if not self.structure:
+            raise ValueError('The neighbourhood structure has not yet been defined. Please call the set_neighburhood() method on the DivergenceProfiles class.')
+        else:
+            #initialise list for receiving divergence indices for each unit. 
+            #Unlike other attributes, we do not add it to the __init__ method as we want the user to quickly resolve the problem if he has not called this method.
+            self.divergence_data=[]
+            for origin in range(self.size):
+                #create profile instance for unit origin
+                divergence_from_origin = LocalDivergenceProfile(self,origin)
+                #compute all indices with calculate_indices() method
+                divergence_from_origin.calculate_indices()
+                #add the profile and indices in LocalDivergenceProfile structure into the divergence data list
+                self.divergence_data.append(divergence_from_origin)
+            #compute the global indices over all units once all profiles are given
+            self.hindex=sum([self.divergence_data[i].profile[0]for i in range(self.size)])/self.size
+            self.ehindex=sum([self.divergence_data[i].expected_divergence for i in range(self.size)])/self.size
+            self.mean_max_index=sum([self.divergence_data[i].max_index for i in range(self.size)])/self.size
 
 
     def update_data(self,suffixe=''): 
@@ -398,8 +413,10 @@ class DivergenceProfiles :
         
         '''
         #check if the other methods have been called.
-        if self.divergence_data!=None:
-
+        if not self.divergence_data:
+            #raise error if other methods have not yet been called.
+            raise ValueError('No value has been attributed to self.divergence_data. Call set_neighbourhood() and set_profiles() before updating.')
+        else:
             #add columns for each index
             self.dataframe['max_index'+suffixe] = pd.Series(
                     [self.divergence_data[i].max_index for i in range(self.size)],
@@ -413,13 +430,29 @@ class DivergenceProfiles :
             index=[i for i in range(len(self.dataframe))])
             self.dataframe['expected_divergence'+suffixe]=pd.Series([self.divergence_data[i].expected_divergence for i in range(self.size)],
             index=[i for i in range(len(self.dataframe))])
-       
-        else : 
-            #raise error if other methods have not yet been called.
-            raise ValueError('No value has been attributed to self.divergence_data. Call set_neighbourhood() and set_profiles() before updating.')
-            
-    def plot(self):
-        pass
+                
+    def plot(self, variable,figure_size=(12,10),text='',color_type='Reds',set_ticks=False):
+        '''
+        This method will plot the map of a given local index. This could be a segregation measure or any other quantitative variable.
+        Parameters
+        ----------
+        variable
+        figure_size
+        text
+        color_type
+        set_ticks
+        
+        '''
+        f, ax = plt.subplots(1, figsize=figure_size)
+        ax = data.plot(column=variable,cmap=color_type,legend=True,ax=ax)
+        ax.spines["top"].set_visible(False)    
+        ax.spines["bottom"].set_visible(False)    
+        ax.spines["right"].set_visible(False)    
+        ax.spines["left"].set_visible(False)
+        if set_ticks==False:
+            ax.set_xticks([], [])
+            ax.set_yticks([], [])
+        lims = plt.axis('equal')
 
     def save_dataframe(self,file_name):
         ''' Save updated dataframe with path and file name.'''
