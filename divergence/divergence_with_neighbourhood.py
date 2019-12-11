@@ -76,7 +76,7 @@ def theoretical_max_distortion(demographics):
     Returns 
     -------
     theo_max_distortion : float
-        the max_index (or expected_divergence) of the most segregated configuration as described above. 
+        the distortion_index (or expected_divergence) of the most segregated configuration as described above. 
     
     '''
     #initialise a population matrix with new order : 
@@ -97,7 +97,7 @@ def theoretical_max_distortion(demographics):
             ordered_groups[group]-=segregated_population[unit,group]
     #calculate the divergence profile over the aggregation process with kl_divergence. 
     divergence_profile=kl_divergence_profile(segregated_population,ordered_proportions)
-    #calculate the mean of the profile equal to the max_index of the most segregated unit in the most segregated configuration possible. 
+    #calculate the mean of the profile equal to the distortion_index of the most segregated unit in the most segregated configuration possible. 
     theo_max_distortion = np.sum(divergence_profile)/len(segregated_population)
     return(theo_max_distortion)
     
@@ -133,12 +133,12 @@ class LocalDivergenceProfile():
                        focal distances (argmax(aggregated KL divergence < threshold)) for threshold values in [0,1]. See Olteanu and al. (2019). 
         - min_profile: numpy array
                        focal distances (argmin(aggregated KL divergence < threshold)) for threshold values in [0,1].
-        - max_index: float
+        - distortion_index: float
                      mean focal distances over all threshold values for last passage (max_profile)
         - min_index: float
                      mean focal distances over all threshold values for first passage (min_profile)
         - delta_index: float
-                       difference max_index - min_index, or the enveloppe of the profile.
+                       difference distortion_index - min_index, or the enveloppe of the profile.
         - expected_divergence: float
                                expected value of KL divergence over the random choice of aggregated level (or empirical mean value of the KL divergence for all aggregated levels).
             
@@ -146,7 +146,7 @@ class LocalDivergenceProfile():
     Methods
     =======
         - calculate_indexes()
-            Returns: indices as class attributes (max_profile, min_profile, max_index, min_index, delta_index, expected_divergence) 
+            Returns: indices as class attributes (max_profile, min_profile, distortion_index, min_index, delta_index, expected_divergence) 
             based on divergence profile.
 
 
@@ -172,7 +172,7 @@ class LocalDivergenceProfile():
         self.max_profile=np.zeros(len(self.sorted_population))
         self.min_profile=np.zeros(len(self.sorted_population))
         #initialise distortion indices before method call
-        self.max_index=None
+        self.distortion_index=None
         self.min_index=None
         self.delta_index=None
         self.expected_divergence=None
@@ -194,10 +194,10 @@ class LocalDivergenceProfile():
             self.min_profile[level-1]=min_distortion
         #change data type of max_profile and min_profile for calculations 
         delta_min_max=list(map(float.__sub__,self.max_profile , self.min_profile))
-        #compute max_index as weighted (by population count) mean of max_profile
-        self.max_index=np.sum(np.multiply(self.max_profile , sorted_pop_local))/self.city_demography.total_pop
-        #normalise max_index with normalisation coefficient sup_distortion.
-        self.max_index_normal=self.max_index / self.sup_distortion 
+        #compute distortion_index as weighted (by population count) mean of max_profile
+        self.distortion_index=np.sum(np.multiply(self.max_profile , sorted_pop_local))/self.city_demography.total_pop
+        #normalise distortion_index with normalisation coefficient sup_distortion.
+        self.distortion_index_normal=self.distortion_index / self.sup_distortion 
         #compute min_index as weighted (by population count) mean of min_profile
         self.min_index=np.sum(np.multiply(self.min_profile , sorted_pop_local))/self.city_demography.total_pop
         #compute delta_index as weighted (by population count) mean of delta_min_max
@@ -228,7 +228,7 @@ class DivergenceProfiles :
     ==========
     dataframe : Geopandas 
         copy of original dataframe with added columns after update_data() call:
-            - max_index : the mean focal distance calculated with the 'last passage' approach 
+            - distortion_index : the mean focal distance calculated with the 'last passage' approach 
             (or the last time the divergence passes a threshold before converging to 0 throughout the aggregation process). See documentation and Olteanu and al.(2019).
             - min_index : the mean focal distance calculated with the **first passage** approach.
             - delta_index : the difference of min and max indices. This index corresponds to the enveloppe of the individual trajectory. 
@@ -260,7 +260,7 @@ class DivergenceProfiles :
     
     divergence_data : list of LocalDivergenceProfile class
         dependancy: set_profiles()
-        the divergence profile and distortion indices (``max_index``, ``min_index``,``expected_divergence``) for all units.
+        the divergence profile and distortion indices (``distortion_index``, ``min_index``,``expected_divergence``) for all units.
     
     hindex : float
         dependancy: set_profiles()
@@ -270,9 +270,9 @@ class DivergenceProfiles :
         dependancy: set_profiles()
         the mean expected_divergence over all units. 
     
-    mean_max_index : float
+    mean_distortion_index : float
         dependancy: set_profiles()
-        the mean max_index over all units. 
+        the mean distortion_index over all units. 
         
     
     
@@ -318,7 +318,7 @@ class DivergenceProfiles :
         self.structure=None
         self.hindex=None
         self.ehindex=None
-        self.mean_max_index=None
+        self.mean_distortion_index=None
         
    
     def set_neighbourhood(self,path='euclidean',marginal_group='None'):
@@ -378,7 +378,7 @@ class DivergenceProfiles :
             - divergence_data
             - hindex
             - ehindex
-            - mean_max_index
+            - mean_distortion_index
         
         '''
         #check if the set_neighbourhood() method has been called first and send an error message.
@@ -398,7 +398,7 @@ class DivergenceProfiles :
             #compute the global indices over all units once all profiles are given
             self.hindex=sum([self.divergence_data[i].profile[0]for i in range(self.size)])/self.size
             self.ehindex=sum([self.divergence_data[i].expected_divergence for i in range(self.size)])/self.size
-            self.mean_max_index=sum([self.divergence_data[i].max_index for i in range(self.size)])/self.size
+            self.mean_distortion_index=sum([self.divergence_data[i].distortion_index_normal for i in range(self.size)])/self.size
 
 
     def update_data(self,suffixe=''): 
@@ -412,7 +412,7 @@ class DivergenceProfiles :
             (enabling comparison between indices resulting from different neighbourhood structures.)
         Returns 
         -------
-        Upadated dataframe with columns "meax_index", "max_index_normal", "delta_index", "expected_divergence".
+        Upadated dataframe with columns "meax_index", "distortion_index_normal", "delta_index", "expected_divergence".
         
         '''
         #check if the other methods have been called.
@@ -421,11 +421,11 @@ class DivergenceProfiles :
             raise ValueError('No value has been attributed to self.divergence_data. Call set_neighbourhood() and set_profiles() before updating.')
         else:
             #add columns for each index
-            self.dataframe['max_index'+suffixe] = pd.Series(
-                    [self.divergence_data[i].max_index for i in range(self.size)],
+            self.dataframe['distortion_index'+suffixe] = pd.Series(
+                    [self.divergence_data[i].distortion_index for i in range(self.size)],
                     index = [i for i in range(len(self.dataframe))]
                     )
-            self.dataframe['max_index_normal'+suffixe]=pd.Series([self.divergence_data[i].max_index_normal for i in range(self.size)],
+            self.dataframe['distortion_index_normal'+suffixe]=pd.Series([self.divergence_data[i].distortion_index_normal for i in range(self.size)],
             index=[i for i in range(len(self.dataframe))])
             self.dataframe['min_index'+suffixe]=pd.Series([self.divergence_data[i].min_index for i in range(self.size)],
             index=[i for i in range(len(self.dataframe))])

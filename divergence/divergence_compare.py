@@ -33,16 +33,22 @@ import scipy.stats
 
 
 # In[20]:
-
-
-def pdf(dd_profile,X,w):
-    '''
-    Compute X-pdf : frequency for w value
-
-    '''
-    density=sm.nonparametric.KDEUnivariate(dd_profile[X])
-    density.fit()
-    return(density.evaluate(w))
+class PDF():
+    
+    def __init__(self,dataframe,variable):
+        self.variable=variable
+        self.data=dataframe[variable]
+    
+    def function(self,w):
+        density=sm.nonparametric.KDEUnivariate(self.data)
+        density.fit()
+        return(density.evaluate(w))
+        
+    def distribution_plot(self,step):
+        min_support=min(self.data)
+        max_support=max(self.data)
+        vect=np.arange(min_support-10*step,max_support+10*step,step)
+        plt.plot(vect,self.function(vect))
 
 
 
