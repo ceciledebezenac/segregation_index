@@ -6,8 +6,8 @@ import math
 import pandas as pd
 import geopandas as gdp
 import matplotlib.pyplot as plt
-from basic_analysis import Demographics
-from neighbourhood import Neighbourhood
+from distortion.divergence.basic_analysis import Demographics
+from distortion.divergence.neighbourhood import Neighbourhood
 
 
 def filter_na(data,variable,show_null=True):
@@ -82,7 +82,7 @@ def theoretical_max_distortion(demographics):
     segregated_population=np.zeros_like(demographics.population_matrix)
     
     #sort the groups by population count to start placing the smallest groups.
-    ordered_groups=sorted(demographics.sum_per_group)
+    ordered_groups=sorted(demographics.sum_pop_group)
     ordered_proportions=sorted(demographics.global_statistics)
     
     #fill in the population matrix with the sorted population, group by group till the unit the maximum capacity (mean over all units) has been reached.
@@ -250,19 +250,26 @@ class DivergenceProfiles :
     sup_distortion : float
         distortion index of the theoretically most segregated city given global statistics. See function ``theoretical_max_distortion``.
     
+    Dependant Attributes
+    ====================
     structure : Neighbourhood class
+        dependancy: set_neighbourhood()
         the neighbouring structure in the city based of the path given by the user. 
     
     divergence_data : list of LocalDivergenceProfile class
+        dependancy: set_profiles()
         the divergence profile and distortion indices (``max_index``, ``min_index``,``expected_divergence``) for all units.
     
     hindex : float
+        dependancy: set_profiles()
         the *H-index* or entropy index descibed by Reardon(2002). 
     
     ehindex : float
+        dependancy: set_profiles()
         the mean expected_divergence over all units. 
     
     mean_max_index : float
+        dependancy: set_profiles()
         the mean max_index over all units. 
         
     
@@ -273,7 +280,8 @@ class DivergenceProfiles :
 
     '''
         
-    def __init__(self,geodata,groups,key):
+    def __init__(self,geodata,groups):
+        
         #initialise the attributes
         self.dataframe=geodata[geodata['Total']>0]
         #make sure the indexing is in order (after data cleaning and filtering rows)
@@ -282,9 +290,9 @@ class DivergenceProfiles :
         self.size=len(self.dataframe)
         #the aggregated polygon of the whole city 
         self.shape=cascaded_union(self.dataframe.geometry)
-        #the key preferred by user. Note that this attribute is not used here 
+       
         #but would be of use if graphs (dictionary) replace the numpy array structure of the population data : future update for graph distance instead of crow distance. 
-        self.key=key
+
         self.groups=groups
         #the polygon objects that make up the whole city.
         self.coordinates=self.dataframe.geometry
@@ -317,8 +325,8 @@ class DivergenceProfiles :
         -------
         updated population information if marginal group given, 
         structure attribute : Neighbourhood class
-        
         '''
+        
         
         if marginal_group!='None':
             #segment the population accordingly with specific group and all the others
@@ -334,7 +342,7 @@ class DivergenceProfiles :
       
             
         #create a Neighborhood class to compute the specific neighbourhood structure type.
-        self.structure=Neighbourhood(self)
+        self.structure=Neighbourhood(self.dataframe,self.groups)
         #access the right method of Neighbourhood instance created above to give it a particular structure with the 'path' parameter. 
         if path=='euclidean' :
             self.structure.set_euclidean_neighbours()
@@ -391,6 +399,7 @@ class DivergenceProfiles :
         '''
         #check if the other methods have been called.
         if self.divergence_data!=None:
+
             #add columns for each index
             self.dataframe['max_index'+suffixe] = pd.Series(
                     [self.divergence_data[i].max_index for i in range(self.size)],
@@ -409,7 +418,8 @@ class DivergenceProfiles :
             #raise error if other methods have not yet been called.
             raise ValueError('No value has been attributed to self.divergence_data. Call set_neighbourhood() and set_profiles() before updating.')
             
-
+    def plot(self):
+        pass
 
     def save_dataframe(self,file_name):
         ''' Save updated dataframe with path and file name.'''
