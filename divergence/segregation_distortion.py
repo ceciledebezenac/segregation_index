@@ -6,8 +6,8 @@ import math
 import pandas as pd
 
 import matplotlib.pyplot as plt
-from distortion.divergence.basic_analysis import Demographics
-from distortion.divergence.neighbourhood import Neighbourhood
+from divergence.basic_analysis import Demographics
+from divergence.neighbourhood import Neighbourhood
 import seaborn as sns
 
 
