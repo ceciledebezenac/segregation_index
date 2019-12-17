@@ -12,7 +12,7 @@ from shapely.ops import cascaded_union
 import math
 import pandas as pd
 import geopandas as gdp
-from distortion.divergence.basic_analysis import Demographics
+from divergence.basic_analysis import Demographics
 
 
 
