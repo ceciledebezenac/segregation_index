@@ -17,10 +17,10 @@ import random as rd
 
 
 #access the data for the test
-f = open('fixatures/fixature_python_object','rb')
+f = open('test_data/fixature_python_object','rb')
 distortion_ref = pck.load(f)
 f.close()
-data_test=gdp.read_file('fixatures/fixature_random_data.shp')
+data_test=gdp.read_file('test_data/fixature_random_data.shp')
 data_test.rename(columns={'Population':'Population_0','Populati_1':'Population_1'},inplace=True)
 
 
