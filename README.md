@@ -1,7 +1,7 @@
 # How to use the segregation_index module
 
 This module enables users to compute a new segregation measure, the distortion index, for city level units. 
-The procedure used here is based on the method described by (link). From local level KL divergence,
+The procedure used here is based on the method described by [Olteanu and al.(2018)][1]. From local level KL divergence,
 KL profiles are computed step by step while progressively aggregating closest neighbours. 
 Unlike many segregation measures, the distortion index is shown to be multi scalar and multi-ethnic.
 
@@ -10,7 +10,7 @@ Unlike many segregation measures, the distortion index is shown to be multi scal
 ### The method
 Segregation can be seen as the divergence from a random configuration of an evenly distributed population. 
 An appropirate local measure is thus the KL divergence that returns the difference between the distribution
-in the local area and the global distribution of the city. The method described here goes beyond the local scale of 
+in the local area and the global distribution of the city [Amari and Shun-ichi (2010)][2]. The method described here goes beyond the local scale of 
 the administrative units by including neighbourhing distributions in the local experience of segregation. 
 To do this, given an origin unit, all neighbours are sorted by a particular metric, from the closest one to the farthest. 
 This ordered list computed for all origin units represents the neighbourhood structure of the city. 
@@ -19,6 +19,7 @@ thus creating the KL divergence profile.
 These profiles converge more or less quickly to 0. Given a threshold T, we define the focal distance f(T) 
 which represents the aggregation level for last passage of the curve under T. 
 By averaging f over all possible values of T, we get a multi-scalar indicator, the distortion index. 
+![Alt](/wp.png "Focal distance for a given threshold")
 
 ### The module organistation
 This library is organised in different independant modules:
@@ -74,6 +75,9 @@ For more details on how to use this module, please check-out our Chicago example
 This module is open to contribution. To add any changes to the method please contact cecidebezenac@gmail.com and request a pull! 
 Be sure to test your changes with the test_distortion.py available on the GitHub page. 
 
+
+[1]:https://www.pnas.org/content/116/25/12250.short?rss=1 
+[2]:https://www.researchgate.net/publication/228646641_Information_geometry_of_divergence_functions 
 ## Licence
 
 
