@@ -62,7 +62,7 @@ The main modules required to run the code are:
 - math
 
 ## Installation
-To use this module, please dowload the source code from (link).
+To use this module, please dowload the source code from [GitHub](https://github.com/ceciledebezenac/segregation_index) .
 
 ## Usage
 
