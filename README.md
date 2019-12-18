@@ -46,7 +46,7 @@ This library is organised in different independant modules:
   
 The dependancy graph of the modules:
 
-![](images/organisation.png "Organisation")
+![](images/organistation.png "Organisation")
 
 ## Requirements
 
