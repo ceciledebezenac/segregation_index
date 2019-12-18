@@ -80,7 +80,8 @@ Be sure to test your changes with the test_distortion.py available on the GitHub
 
 [1]:https://www.pnas.org/content/116/25/12250.short?rss=1 
 [2]:https://www.researchgate.net/publication/228646641_Information_geometry_of_divergence_functions 
-## Licence
 
+## License
 
+[MIT](https://choosealicense.com/licenses/mit/)
 
