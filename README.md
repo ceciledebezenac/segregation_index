@@ -20,7 +20,7 @@ These profiles converge more or less quickly to 0. Given a threshold T, we defin
 which represents the aggregation level for last passage of the curve under T. 
 By averaging f over all possible values of T, we get a multi-scalar indicator, the distortion index. 
 
-![](images/focal_distance.png "Focal distance for a given threshold")
+![](images/focaldistance.png "Focal distance for a given threshold")
 
 
 
