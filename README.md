@@ -19,7 +19,7 @@ thus creating the KL divergence profile.
 These profiles converge more or less quickly to 0. Given a threshold T, we define the focal distance f(T) 
 which represents the aggregation level for last passage of the curve under T. 
 By averaging f over all possible values of T, we get a multi-scalar indicator, the distortion index. 
-![Alt](/wp.png "Focal distance for a given threshold")
+![](images/focal_distance.png "Focal distance for a given threshold")
 
 ### The module organistation
 This library is organised in different independant modules:
