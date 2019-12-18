@@ -1,4 +1,4 @@
-# How to use the segregation_index module
+# segregation_index module
 
 This module enables users to compute a new segregation measure, the distortion index, for city level units. 
 The procedure used here is based on the method described by [Olteanu and al.(2018)][1]. From local level KL divergence,
@@ -26,7 +26,7 @@ This library is organised in different independant modules:
 
 - basic_analysis: used to synthetise demographic information for easy process with numpy.
     * Demographic() returning specific demographic figures and population matrix. 
-    * LorenzCurve() retruning the lorenz curve qnd gini index relative to spatial population concentration.
+    * LorenzCurve() retruning the lorenz curve and gini index relative to spatial population concentration.
 
 - neighbourhood: used to create a neighbourhod structure as the most computationally expensive procedure. 
     * Neighbourhood() returning the neighbourhood structure for all units in a city, given a shapefile dataframe. 
@@ -43,7 +43,7 @@ This library is organised in different independant modules:
   
 The dependancy graph of the modules:
 
-image
+![](images/organisation.png "Focal distance for a given threshold")
 
 
 ## Requirements
